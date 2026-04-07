@@ -1,67 +1,52 @@
-export interface User {
-  id: string;
+export interface UserSqlData {
+  userId: string;
   username: string;
-  fullName: string;
-  role: string;
-  roleLevel: 'high' | 'medium' | 'low';
+  roleName: string; 
+  securityLevel: 'high' | 'medium' | 'low'; // ระดับสิทธิ์
   status: 'active' | 'inactive';
-  department?: string;
 }
 
-// ข้อมูลจำลอง
-export const initialUsersData: User[] = [
+export const initialUsersData: UserSqlData[] = [
   {
-    id: '1',
-    username: 'admin01',
-    fullName: 'ผู้ดูแล',
-    role: '', 
-    roleLevel: 'high',
+    userId: 'USR-002',
+    username: 'admin.bwc',
+    roleName: 'ผู้ดูแลระบบส่วนกลาง (Admin)', 
+    securityLevel: 'high',
     status: 'active',
-    department: 'IT',
   },
   {
-    id: '2',
-    username: 'sup01',
-    fullName: 'หัวหน้า',
-    role: '', 
-    roleLevel: 'medium',
+    userId: 'USR-003',
+    username: 'weerayut.m',
+    roleName: 'หัวหน้าชุดปฏิบัติการ (Supervisor)', 
+    securityLevel: 'medium',
     status: 'active',
-    department: 'Operations',
   },
   {
-    id: '3',
-    username: 'off02',
-    fullName: 'เจ้าหน้าที่',
-    role: '', 
-    roleLevel: 'low',
+    userId: 'USR-005',
+    username: 'somkiat.k',
+    roleName: 'หัวหน้าชุดปฏิบัติการ (Supervisor)', 
+    securityLevel: 'medium',
+    status: 'active',
+  },
+  {
+    userId: 'USR-001',
+    username: 'somchai.r',
+    roleName: 'เจ้าหน้าที่ปฏิบัติการ (Officer)', 
+    securityLevel: 'low',
+    status: 'active',
+  },
+  {
+    userId: 'USR-004',
+    username: 'malee.s',
+    roleName: 'เจ้าหน้าที่ปฏิบัติการ (Officer)', 
+    securityLevel: 'low',
     status: 'inactive',
-    department: 'Patrol',
   },
   {
-    id: '4',
-    username: 'off03',
-    fullName: 'จ.ส.ต.มนตรี',
-    role: '', 
-    roleLevel: 'low',
+    userId: 'USR-006',
+    username: 'wichai.s',
+    roleName: 'เจ้าหน้าที่ปฏิบัติการ (Officer)', 
+    securityLevel: 'low',
     status: 'active',
-    department: 'Patrol',
-  },
-  {
-    id: '5',
-    username: 'sup02',
-    fullName: 'ส.ต.ท.วิจิตร',
-    role: '', 
-    roleLevel: 'medium',
-    status: 'active',
-    department: 'Security',
-  },
-  {
-    id: '6',
-    username: 'off04',
-    fullName: 'ร.ต.อ.สมชาย',
-    role: '', 
-    roleLevel: 'low',
-    status: 'active',
-    department: 'Patrol',
   },
 ];

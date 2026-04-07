@@ -1,14 +1,15 @@
 import { useEffect } from 'react';
 import { X, Play, Archive, Download, Clock, User, MapPin, AlertTriangle, Video, FileText } from 'lucide-react';
-import type { VideoItem } from '../../data/videoLibraryMockData';
+import type { VideoLibrarySqlData } from '../../data/videoLibraryMockData';
+import type { VideoLibraryTranslationData, VideoLibraryLanguage } from '../../locales/videoLibraryTranslations';
 
 interface VideoLibraryModalProps {
   show: boolean;
-  video: VideoItem | null;
+  video: VideoLibrarySqlData | null;
   onClose: () => void;
   onArchive: (id: string) => void;
-  translations: Record<string, string>;
-  language: 'th' | 'en';
+  translations: VideoLibraryTranslationData; 
+  language: VideoLibraryLanguage;
   darkMode: boolean;
 }
 
@@ -33,6 +34,11 @@ export function VideoLibraryModal({ show, video, onClose, onArchive, translation
 
   if (!show || !video) return null;
 
+  const getTimeString = (isoString: string) => {
+    if (!isoString || !isoString.includes('T')) return isoString;
+    return isoString.split('T')[1].substring(0, 5);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
       <div className={`w-full max-w-7xl max-h-[95vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
@@ -43,14 +49,9 @@ export function VideoLibraryModal({ show, video, onClose, onArchive, translation
               <Video className="w-6 h-6 text-[#0c274b]" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">{video.code}</h2>
-              <p className="text-sm text-gray-300">{video.title}</p>
+              <h2 className="text-xl font-bold text-white">{video.missionId}</h2>
+              <p className="text-sm text-gray-300">{video.missionName}</p>
             </div>
-            <span className={`ml-4 px-3 py-1 rounded-full text-xs font-bold ${
-              video.status === 'ai-alert' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
-            }`}>
-              {video.statusText}
-            </span>
           </div>
           <button
             onClick={onClose}
@@ -138,7 +139,7 @@ export function VideoLibraryModal({ show, video, onClose, onArchive, translation
                         {language === 'th' ? 'วันที่บันทึก' : 'Recording Date'}
                       </p>
                       <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {new Date(video.date).toLocaleDateString('th-TH', { 
+                        {new Date(video.startTime.includes('T') ? video.startTime.split('T')[0] : video.startTime).toLocaleDateString('th-TH', { 
                           year: 'numeric', month: 'long', day: 'numeric' 
                         })}
                       </p>
@@ -148,7 +149,7 @@ export function VideoLibraryModal({ show, video, onClose, onArchive, translation
                         {language === 'th' ? 'เวลาเริ่มต้น' : 'Start Time'}
                       </p>
                       <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                        {video.time} {language === 'th' ? 'น.' : ''}
+                        {getTimeString(video.startTime)} {language === 'th' ? 'น.' : ''}
                       </p>
                     </div>
                     <div className={`rounded-lg p-3 ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
@@ -196,7 +197,7 @@ export function VideoLibraryModal({ show, video, onClose, onArchive, translation
                         </p>
                       </div>
                       <p className={`${darkMode ? 'text-white' : 'text-gray-900'} font-bold text-sm`}>
-                        {video.officer} {video.officerName}
+                        {video.officerId} {video.officerName}
                       </p>
                     </div>
 
@@ -208,7 +209,7 @@ export function VideoLibraryModal({ show, video, onClose, onArchive, translation
                         </p>
                       </div>
                       <p className={`${darkMode ? 'text-white' : 'text-gray-900'} font-medium text-sm`}>
-                        {video.title}
+                        {video.missionName}
                       </p>
                     </div>
 

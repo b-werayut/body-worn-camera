@@ -1,27 +1,27 @@
 import { useState, useEffect } from 'react';
 import { X, User as UserIcon, Save, Trash2, AlertTriangle } from 'lucide-react';
-import type { User } from '../../data/userMockData';
+import type { UserSqlData } from '../../data/userMockData';
+import type { UserTranslationData, UserLanguage } from '../../locales/userTranslations';
 
 interface UserModalProps {
-  user: User | null;
+  user: UserSqlData | null; 
   mode: 'add' | 'edit';
   darkMode: boolean;
-  language: 'th' | 'en';
+  language: UserLanguage; 
   onClose: () => void;
-  onSave: (user: User) => void;
+  onSave: (user: UserSqlData) => void;
   onDelete?: (userId: string) => void;
+  translations: UserTranslationData;
 }
 
-export function UserModal({ user, mode, darkMode, language, onClose, onSave, onDelete }: UserModalProps) {
-  const [formData, setFormData] = useState<User>(
+export function UserModal({ user, mode, darkMode, onClose, onSave, onDelete, translations }: UserModalProps) {
+  const [formData, setFormData] = useState<UserSqlData>(
     user || {
-      id: '',
+      userId: '',
       username: '',
-      fullName: '',
-      role: '',
-      roleLevel: 'low',
+      roleName: '',
+      securityLevel: 'low',
       status: 'active',
-      department: '',
     }
   );
   
@@ -30,7 +30,7 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
   
   const [permissions, setPermissions] = useState({
     dashboard: false,
-    spotCheck: false,
+    activities: false,
     live: false,
     video: false,
     reports: false,
@@ -54,93 +54,23 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
     };
   }, []);
 
-  const t: Record<string, Record<string, string>> = {
-    th: {
-      addUser: 'เพิ่มผู้ใช้งานใหม่',
-      editUser: 'แก้ไขผู้ใช้งาน',
-      username: 'ชื่อผู้ใช้ (Username)', 
-      fullName: 'ชื่อ-นามสกุล',
-      password: 'รหัสผ่าน Password',
-      role: 'บทบาท (Role)',
-      roleUser: 'ผู้ใช้งาน',
-      roleAdmin: 'ผู้ดูแลระบบ',
-      roleOfficer: 'เจ้าหน้าที่',
-      roleSupervisor: 'หัวหน้า',
-      department: 'หน่วยงาน / สังกัด',
-      security: 'ระดับความลับ',
-      securityHigh: 'สูง',
-      securityMedium: 'ปานกลาง',
-      securityNormal: 'ปกติ',
-      securityLow: 'ต่ำ',
-      permissions: 'สิทธิ์การเข้าถึงระบบ',
-      permDashboard: 'Dashboard',
-      permSpotCheck: 'Spot Check',
-      permLive: 'Live',
-      permVideo: 'วีดีโอ',
-      permReports: 'รายงาน',
-      permUsers: 'ผู้ใช้งาน',
-      save: 'บันทึก',
-      cancel: 'ยกเลิก',
-      backToMain: 'กลับหน้าหลัก', 
-      delete: 'ลบผู้ใช้งาน',
-      deleteConfirmTitle: 'ยืนยันการลบผู้ใช้งาน',
-      deleteConfirmMessage: 'คุณแน่ใจหรือไม่ที่จะลบผู้ใช้งานนี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้',
-      confirmDelete: 'ยืนยันการลบ',
-    },
-    en: {
-      addUser: 'Add New User',
-      editUser: 'Edit User',
-      username: 'Username',
-      fullName: 'Full Name',
-      password: 'Password',
-      role: 'Role',
-      roleUser: 'User',
-      roleAdmin: 'Admin',
-      roleOfficer: 'Officer',
-      roleSupervisor: 'Supervisor',
-      department: 'Department',
-      security: 'Security Level',
-      securityHigh: 'High',
-      securityMedium: 'Medium',
-      securityNormal: 'Normal',
-      securityLow: 'Low',
-      permissions: 'System Access Permissions',
-      permDashboard: 'Dashboard',
-      permSpotCheck: 'Spot Check',
-      permLive: 'Live',
-      permVideo: 'Video',
-      permReports: 'Reports',
-      permUsers: 'Users',
-      save: 'Save',
-      cancel: 'Cancel',
-      backToMain: 'Back to Main',
-      delete: 'Delete User',
-      deleteConfirmTitle: 'Confirm Delete',
-      deleteConfirmMessage: 'Are you sure you want to delete this user? This action cannot be undone.',
-      confirmDelete: 'Confirm Delete',
-    },
-  };
-
-  const translations = t[language];
-
   const handleSave = () => {
     const roleText = 
-      formData.roleLevel === 'high' ? translations.roleAdmin :
-      formData.roleLevel === 'medium' ? translations.roleSupervisor :
-      translations.roleUser;
+      formData.securityLevel === 'high' ? translations.roleAdmin :
+      formData.securityLevel === 'medium' ? translations.roleSupervisor :
+      translations.roleOfficer;
 
     onSave({
       ...formData,
-      role: roleText,
-      id: formData.id || `user_${Date.now()}`,
+      roleName: roleText, 
+      userId: formData.userId || `USR-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`, // 🚀 สุ่มรหัสแบบ USR-XXX
     });
     onClose();
   };
 
-  // ฟังก์ชันนี้จะถูกเรียกใช้ตอนกดยืนยันการลบ
   const handleDelete = () => {
-    if (onDelete && formData.id) {
-      onDelete(formData.id);
+    if (onDelete && formData.userId) {
+      onDelete(formData.userId);
       onClose();
     }
   };
@@ -152,9 +82,6 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
     });
   };
 
-  // ==========================================
-  // Render: โหมดแก้ไข (Edit Mode)
-  // ==========================================
   if (mode === 'edit') {
     return (
       <>
@@ -197,29 +124,28 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
                   </label>
                 </div>
 
-                {/* Role Dropdown */}
+                {/* Role Dropdown (Security Level) */}
                 <div>
                   <label className={`block font-semibold text-base mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     {translations.role} :
                   </label>
                   <select
-                    value={formData.roleLevel}
-                    onChange={(e) => setFormData({ ...formData, roleLevel: e.target.value as 'high' | 'medium' | 'low' })}
+                    value={formData.securityLevel}
+                    onChange={(e) => setFormData({ ...formData, securityLevel: e.target.value as 'high' | 'medium' | 'low' })}
                     className={`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 hover:border-[#fcd500]/50 cursor-pointer ${
                       darkMode ? 'bg-gray-700 border-gray-600 text-white focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 focus:border-[#0c274b]'
                     }`}
                   >
-                    <option value="low">{translations.roleUser}</option>
+                    <option value="low">{translations.roleOfficer}</option>
                     <option value="medium">{translations.roleSupervisor}</option>
-                    <option value="normal">{translations.roleOfficer}</option>
                     <option value="high">{translations.roleAdmin}</option>
                   </select>
                 </div>
 
-                {/* Security Level */}
+                {/* Status Dropdown (Active/Inactive) */}
                 <div>
                   <label className={`block font-semibold text-base mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {translations.security} :
+                    {translations.tableStatus} :
                   </label>
                   <select
                     value={formData.status}
@@ -228,8 +154,8 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
                       darkMode ? 'bg-gray-700 border-gray-600 text-white focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 focus:border-[#0c274b]'
                     }`}
                   >
-                    <option value="active">{translations.securityNormal}</option>
-                    <option value="inactive">{translations.securityMedium}</option>
+                    <option value="active">{translations.active}</option>
+                    <option value="inactive">{translations.inactive}</option>
                   </select>
                 </div>
 
@@ -259,7 +185,7 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
               </div>
             </div>
 
-            {/* Footer ปรับปรุงใหม่: แบ่งฝั่งซ้าย (ปุ่มลบ) และ ขวา (ปุ่มยกเลิก, บันทึก) */}
+            {/* Footer */}
             <div className={`px-8 py-6 border-t-2 flex flex-col sm:flex-row items-center justify-between gap-4 ${
               darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-100 border-gray-200'
             }`}>
@@ -298,7 +224,7 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
           </div>
         </div>
 
-        {/* เพิ่มหน้าต่างยืนยันการลบ (Delete Confirmation Modal) */}
+        {/* หน้าต่างยืนยันการลบ (Delete Confirmation Modal) */}
         {showDeleteConfirm && (
           <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn">
             <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 animate-slideUp ${
@@ -314,7 +240,6 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
                 </p>
                 <div className={`p-3 rounded-lg border-l-4 border-red-500 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
                   <p className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{formData.username}</p>
-                  <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{formData.fullName}</p>
                 </div>
                 <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <button
@@ -337,25 +262,12 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
             </div>
           </div>
         )}
-
-        <style>{`
-          @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-          }
-          @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          .animate-fadeIn { animation: fadeIn 0.2s ease-out; }
-          .animate-slideUp { animation: slideUp 0.3s ease-out; }
-        `}</style>
       </>
     );
   }
 
   // ==========================================
-  // Render: โหมดเพิ่มผู้ใช้ (Add Mode) - เหมือนเดิม
+  // Render: โหมดเพิ่มผู้ใช้ (Add Mode) 
   // ==========================================
   return (
     <>
@@ -392,6 +304,7 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
           }`}>
             <div className="space-y-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Username Input */}
                 <div className="space-y-2">
                   <label className={`block font-semibold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     {translations.username} <span className="text-[#fcd500]">*</span>
@@ -406,82 +319,57 @@ export function UserModal({ user, mode, darkMode, language, onClose, onSave, onD
                   />
                 </div>
 
+                {/* Password Input */}
                 <div className="space-y-2">
                   <label className={`block font-semibold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {translations.fullName} <span className="text-[#fcd500]">*</span>
+                    {translations.password} <span className="text-[#fcd500]">*</span>
                   </label>
                   <input
-                    type="text"
-                    value={formData.fullName}
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     className={`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 hover:border-[#fcd500]/50 ${
                       darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-[#0c274b]'
                     }`}
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className={`block font-semibold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {translations.password} <span className="text-[#fcd500]">*</span>
-                </label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 hover:border-[#fcd500]/50 ${
-                    darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-[#0c274b]'
-                  }`}
-                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="space-y-2">
-                  <label className={`block font-semibold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                    {translations.department} <span className="text-[#fcd500]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.department || ''}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    className={`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 hover:border-[#fcd500]/50 ${
-                      darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-[#0c274b]'
-                    }`}
-                  />
-                </div>
-
+                {/* Role (Security Level) */}
                 <div className="space-y-2">
                   <label className={`block font-semibold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                     {translations.role} <span className="text-[#fcd500]">*</span>
                   </label>
                   <select
-                    value={formData.roleLevel}
-                    onChange={(e) => setFormData({ ...formData, roleLevel: e.target.value as 'high' | 'medium' | 'low' })}
+                    value={formData.securityLevel}
+                    onChange={(e) => setFormData({ ...formData, securityLevel: e.target.value as 'high' | 'medium' | 'low' })}
                     className={`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 hover:border-[#fcd500]/50 cursor-pointer ${
                       darkMode ? 'bg-gray-700 border-gray-600 text-white focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 focus:border-[#0c274b]'
                     }`}
                   >
-                    <option value="low">{translations.roleUser}</option>
+                    <option value="low">{translations.roleOfficer}</option>
                     <option value="medium">{translations.roleSupervisor}</option>
                     <option value="high">{translations.roleAdmin}</option>
                   </select>
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <label className={`block font-semibold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  {translations.security} <span className="text-[#fcd500]">*</span>
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
-                  className={`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 hover:border-[#fcd500]/50 cursor-pointer ${
-                    darkMode ? 'bg-gray-700 border-gray-600 text-white focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 focus:border-[#0c274b]'
-                  }`}
-                >
-                  <option value="active">{translations.securityHigh}</option>
-                  <option value="inactive">{translations.securityMedium}</option>
-                </select>
+                {/* Status */}
+                <div className="space-y-2">
+                  <label className={`block font-semibold text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                    {translations.tableStatus} <span className="text-[#fcd500]">*</span>
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as 'active' | 'inactive' })}
+                    className={`w-full px-4 py-3 border-2 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 hover:border-[#fcd500]/50 cursor-pointer ${
+                      darkMode ? 'bg-gray-700 border-gray-600 text-white focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 focus:border-[#0c274b]'
+                    }`}
+                  >
+                    <option value="active">{translations.active}</option>
+                    <option value="inactive">{translations.inactive}</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>

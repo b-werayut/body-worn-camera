@@ -1,4 +1,5 @@
 import { Search, Calendar, X } from 'lucide-react';
+import type { SpotCheckTranslationData } from '../../locales/spotCheckTranslations';
 
 export interface SpotCheckFiltersProps {
   searchQuery: string;
@@ -14,9 +15,8 @@ export interface SpotCheckFiltersProps {
   selectedReportType: string;
   setSelectedReportType: (value: string) => void;
   onReset: () => void;
-  translations: Record<string, string>;
   darkMode: boolean;
-  language?: 'th' | 'en';
+  translations: SpotCheckTranslationData; 
 }
 
 export function SpotCheckFilters({
@@ -34,26 +34,23 @@ export function SpotCheckFilters({
   setSelectedReportType,
   onReset,
   translations,
-  darkMode,
-  language = 'th'
+  darkMode
 }: SpotCheckFiltersProps) {
   return (
-    // อิงตามต้นฉบับ: rounded-xl shadow-lg overflow-hidden bg-white p-4
     <div className={`rounded-xl shadow-lg overflow-hidden p-4 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
       
-      {/* อิงตามต้นฉบับ: grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
         
-        {/* 1. ค้นหา */}
+        {/* ค้นหา */}
         <div className="lg:col-span-2">
           <label className={`text-xs font-medium block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            {translations.search || (language === 'th' ? 'ค้นหา' : 'Search')}
+            {translations.search}
           </label>
           <div className="relative">
             <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <input 
               type="text" 
-              placeholder={translations.searchPlaceholder || (language === 'th' ? 'ค้นหา รหัส, สถานที่, เจ้าหน้าที่...' : 'Search...')}
+              placeholder={translations.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`w-full border px-10 py-2.5 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
@@ -65,11 +62,11 @@ export function SpotCheckFilters({
           </div>
         </div>
 
-        {/* 2. วันที่เริ่มต้น */}
+        {/* วันที่เริ่มต้น */}
         <div>
           <label className={`text-xs font-medium block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             <Calendar className="w-3 h-3 inline mr-1" />
-            {translations.filterDate || (language === 'th' ? 'วันที่เริ่มต้น' : 'Start Date')}
+            {translations.startDate}
           </label>
           <input 
             type="date" 
@@ -83,11 +80,11 @@ export function SpotCheckFilters({
           />
         </div>
 
-        {/* 3. วันที่สิ้นสุด */}
+        {/* วันที่สิ้นสุด */}
         <div>
           <label className={`text-xs font-medium block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
             <Calendar className="w-3 h-3 inline mr-1" />
-            {language === 'th' ? 'วันที่สิ้นสุด' : 'End Date'}
+            {translations.endDate}
           </label>
           <input 
             type="date" 
@@ -101,10 +98,10 @@ export function SpotCheckFilters({
           />
         </div>
 
-        {/* 4. เจ้าหน้าที่ */}
+        {/* เจ้าหน้าที่ */}
         <div>
           <label className={`text-xs font-medium block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            {translations.filterOfficer || (language === 'th' ? 'เจ้าหน้าที่' : 'Officer')}
+            {translations.filterOfficer}
           </label>
           <select 
             value={selectedOfficer}
@@ -115,7 +112,7 @@ export function SpotCheckFilters({
                 : 'bg-white border-gray-300 text-gray-900'
             }`}
           >
-            <option value="all" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.allOfficers || 'ทั้งหมด'}</option>
+            <option value="all" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.allOfficers}</option>
             <option value="A" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>เจ้าหน้าที่ A</option>
             <option value="B" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>เจ้าหน้าที่ B</option>
             <option value="C" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>เจ้าหน้าที่ C</option>
@@ -123,10 +120,10 @@ export function SpotCheckFilters({
           </select>
         </div>
 
-        {/* 5. สถานะ */}
+        {/* สถานะ */}
         <div>
           <label className={`text-xs font-medium block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            {translations.filterStatus || (language === 'th' ? 'สถานะ' : 'Status')}
+            {translations.filterStatus}
           </label>
           <select 
             value={selectedStatus}
@@ -137,19 +134,19 @@ export function SpotCheckFilters({
                 : 'bg-white border-gray-300 text-gray-900'
             }`}
           >
-            <option value="all" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.allStatus || 'ทั้งหมด'}</option>
-            <option value="waiting" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.statusWaiting || 'รอรับงาน'}</option>
-            <option value="accepted" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.statusAccepted || 'รับงานแล้ว'}</option>
-            <option value="in-progress" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.statusInProgress || 'กำลังปฏิบัติงาน'}</option>
-            <option value="completed" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.statusCompleted || 'เสร็จสิ้น'}</option>
-            <option value="cancelled" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.statusCancelled || 'ยกเลิก'}</option>
+            <option value="all" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.allStatus}</option>
+            <option value="waiting" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.statusWaiting}</option>
+            <option value="accepted" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.statusAccepted}</option>
+            <option value="in-progress" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.statusInProgress}</option>
+            <option value="completed" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.statusCompleted}</option>
+            <option value="cancelled" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.statusCancelled}</option>
           </select>
         </div>
 
-        {/* 6. ประเภทรายงาน */}
+        {/* ประเภทรายงาน */}
         <div>
           <label className={`text-xs font-medium block mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            {translations.filterReportType || (language === 'th' ? 'ประเภทรายงาน' : 'Report Type')}
+            {translations.filterReportType}
           </label>
           <select 
             value={selectedReportType}
@@ -160,15 +157,15 @@ export function SpotCheckFilters({
                 : 'bg-white border-gray-300 text-gray-900'
             }`}
           >
-            <option value="all" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.allReportTypes || 'ทั้งหมด'}</option>
-            <option value="daily" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.reportTypeDaily || 'รายงานประจำวัน'}</option>
-            <option value="incident" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.reportTypeIncident || 'รายงานเหตุการณ์พิเศษ'}</option>
-            <option value="inspection" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.reportTypeInspection || 'รายงานการตรวจสอบ'}</option>
-            <option value="training" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.reportTypeTraining || 'รายงานการฝึกอบรม'}</option>
+            <option value="all" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.allReportTypes}</option>
+            <option value="daily" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.reportTypeDaily}</option>
+            <option value="incident" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.reportTypeIncident}</option>
+            <option value="inspection" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.reportTypeInspection}</option>
+            <option value="training" className={darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}>{translations.reportTypeTraining}</option>
           </select>
         </div>
 
-        {/* 7. ปุ่มรีเซ็ต */}
+        {/* ปุ่มรีเซ็ต */}
         <div className="flex items-end">
           <button 
             onClick={onReset}
@@ -179,7 +176,7 @@ export function SpotCheckFilters({
             }`}
           >
             <X className="w-5 h-5" />
-            <span>{translations.reset || (language === 'th' ? 'รีเซ็ต' : 'Reset')}</span>
+            <span>{translations.reset}</span>
           </button>
         </div>
 

@@ -4,25 +4,25 @@ import {
   Menu, X, KeyRound, AlertCircle, Clock,
   LayoutDashboard, Activity, FileText, Video, FileVideo, Users 
 } from 'lucide-react';
-import { translations, type Language } from '../../data/translations';
-import { allAlerts } from '../../data/mockData';
+import { translations, type Language } from '../../locales/translations';
+import { allAlerts, type AlertData } from '../../data/mockData';
 import { Sidebar } from './Sidebar';
+import { Link, useLocation } from 'react-router-dom';
 
 interface HeaderProps {
   language: Language;
   setLanguage: (lang: Language) => void;
   darkMode: boolean;
   setDarkMode: (mode: boolean) => void;
-  currentPage: string;
-  setCurrentPage: (page: string) => void;
   onLogout: () => void;
 }
 
 export function Header({ 
-  language, setLanguage, darkMode, setDarkMode, currentPage, setCurrentPage, onLogout 
+  language, setLanguage, darkMode, setDarkMode, onLogout 
 }: HeaderProps) {
   
   const t = translations[language];
+  const location = useLocation();
   
   // States สำหรับเปิด-ปิดเมนูต่างๆ ใน Header
   const [showNotifications, setShowNotifications] = useState(false);
@@ -35,14 +35,14 @@ export function Header({
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
 
-  // ข้อมูลเมนู (ดึงไอคอนจาก Lucide)
+  // 🚀 เปลี่ยนจาก id เป็น path เพื่อใช้กับ URL
   const navItems = [
-    { id: 'dashboard', label: t.dashboard, icon: LayoutDashboard },
-    { id: 'activities', label: t.activities, icon: Activity },
-    { id: 'reports', label: t.reports, icon: FileText },
-    { id: 'live', label: t.live, icon: Video },
-    { id: 'videos', label: t.videos, icon: FileVideo },
-    { id: 'users', label: t.users, icon: Users },
+    { path: '/dashboard', label: t.dashboard, icon: LayoutDashboard },
+    { path: '/activities', label: t.activities, icon: Activity },
+    { path: '/reports', label: t.reports, icon: FileText },
+    { path: '/live', label: t.live, icon: Video },
+    { path: '/videos', label: t.videos, icon: FileVideo },
+    { path: '/users', label: t.users, icon: Users },
   ];
 
   const alerts = allAlerts.slice(0, 4); // แสดงแค่ 4 รายการล่าสุด
@@ -108,29 +108,42 @@ export function Header({
                     </div>
                   </div>
                   <div className={`divide-y overflow-y-auto max-h-[400px] ${darkMode ? 'divide-gray-700' : 'divide-gray-100'}`}>
-                    {alerts.map((alert) => (
+                    {alerts.map((alert: AlertData) => (
                       <div key={alert.id} className={`p-4 transition-all cursor-pointer ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
                         <div className="flex items-start gap-3">
                           <div className={`p-2 rounded-xl shrink-0 ${alert.severity === 'high' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
                             <AlertCircle className="w-5 h-5" />
                           </div>
-                          <div>
-                            <span className={`px-2 py-0.5 rounded-md text-xs font-bold text-white ${alert.severity === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>
-                              {t[alert.typeKey as keyof typeof t] || alert.typeKey}
-                            </span>
-                            <p className={`text-sm font-medium mt-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{t.officer}: {alert.officer}</p>
-                            <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                              <Clock className="w-3 h-3" /> {alert.time} น.
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`px-2 py-0.5 rounded-md text-xs font-bold text-white ${alert.severity === 'high' ? 'bg-red-500' : 'bg-orange-500'}`}>
+                                {/* ใช้คำแปล ถ้าไม่มีให้ใช้ key ตรงๆ */}
+                                {t[alert.typeKey as keyof typeof t] || alert.typeKey}
+                              </span>
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <Clock className="w-3 h-3" /> {alert.time}
+                              </div>
                             </div>
+                            <p className={`text-sm font-bold truncate ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                              {alert.officer}
+                            </p>
+                            {/* 🚀 แสดงรายละเอียดแจ้งเตือนใหม่ */}
+                            <p className={`text-xs mt-1 line-clamp-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                              {alert.details}
+                            </p>
                           </div>
                         </div>
                       </div>
                     ))}
                   </div>
                   <div className={`p-3 border-t text-center ${darkMode ? 'bg-gray-700/50 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
-                    <button onClick={() => { setShowNotifications(false); setCurrentPage('dashboard'); }} className="text-blue-500 text-sm font-bold hover:underline cursor-pointer">
-                      ดูการแจ้งเตือนทั้งหมด
-                    </button>
+                    <Link 
+                      to="/dashboard" 
+                      onClick={() => setShowNotifications(false)} 
+                      className="block w-full text-blue-500 text-sm font-bold hover:underline cursor-pointer"
+                    >
+                      {language === 'th' ? 'ดูการแจ้งเตือนทั้งหมด' : 'View All Notifications'}
+                    </Link>
                   </div>
                 </div>
               )}
@@ -172,16 +185,18 @@ export function Header({
           <div className="flex gap-2 overflow-x-auto justify-center max-w-5xl mx-auto">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = currentPage === item.id;
+              // เช็คว่า URL ปัจจุบันตรงกับเมนูไหน
+              const isActive = location.pathname.startsWith(item.path);
+              
               return (
-                <button
-                  key={item.id}
-                  onClick={() => setCurrentPage(item.id)}
+                <Link
+                  key={item.path}
+                  to={item.path}
                   className={`flex items-center gap-2 px-5 py-3.5 font-medium transition-all relative whitespace-nowrap rounded-t-xl cursor-pointer ${isActive ? (darkMode ? 'bg-gray-800 text-white shadow-lg' : 'bg-white text-[#0c274b] shadow-lg') : (darkMode ? 'text-gray-400 hover:bg-gray-800/60' : 'text-gray-600 hover:bg-white/60')}`}
                 >
                   <Icon className="w-5 h-5" /> <span>{item.label}</span>
                   {isActive && <div className="absolute bottom-0 left-0 right-0 h-1 bg-linear-to-r from-emerald-500 to-teal-500 rounded-full"></div>}
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -195,15 +210,12 @@ export function Header({
         </div>
       </header>
 
-      {/* ----------------- เรียกใช้ Sidebar Component แทนที่โค้ดเดิม ----------------- */}
       <Sidebar 
         isOpen={showMobileMenu} 
         onClose={() => setShowMobileMenu(false)} 
         language={language}
         setLanguage={setLanguage}
         darkMode={darkMode}
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
         onLogout={onLogout}
       />
 

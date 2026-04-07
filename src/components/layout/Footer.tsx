@@ -1,5 +1,5 @@
 import { Camera } from 'lucide-react';
-import { translations, type Language } from '../../data/translations';
+import { translations, type Language } from '../../locales/translations';
 
 interface FooterProps {
   language: Language;

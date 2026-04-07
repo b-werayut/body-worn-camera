@@ -1,54 +1,53 @@
 import { useState } from 'react';
-import { Calendar, ChevronDown, Search, Play, Archive, X, User, Video, ChevronLeft, ChevronRight, MapPin, AlertTriangle } from 'lucide-react';
-import { type VideoItem, initialVideoData } from '../data/videoLibraryMockData';
+import { Calendar, ChevronDown, Search, Play, Archive, X, User, Video, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { type VideoLibrarySqlData, initialVideoData } from '../data/videoLibraryMockData';
 import { VideoLibraryModal } from '../components/modals/VideoLibraryModal';
+import { videoLibraryTranslations, type VideoLibraryLanguage } from '../locales/videoLibraryTranslations';
 
 interface VideoLibraryProps {
   darkMode: boolean;
-  language: 'th' | 'en';
+  language: VideoLibraryLanguage;
 }
 
-export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
+export function VideoLibrary({ darkMode, language = 'th' }: VideoLibraryProps) {
+  const translations = videoLibraryTranslations[language];
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOfficer, setSelectedOfficer] = useState('all');
   const [selectedSpotCheck, setSelectedSpotCheck] = useState('all');
-  const [selectedEvent, setSelectedEvent] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showVideoModal, setShowVideoModal] = useState(false);
-  const [selectedVideo, setSelectedVideo] = useState<VideoItem | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<VideoLibrarySqlData | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [videos, setVideos] = useState<VideoItem[]>(initialVideoData);
+  const [videos, setVideos] = useState<VideoLibrarySqlData[]>(initialVideoData);
 
-  const t: Record<string, Record<string, string>> = {
-    th: { title: 'คลังวิดีโอ', listTitle: 'รายการวิดีโอ', filterDate: 'วันที่', filterOfficer: 'เจ้าหน้าที่', filterSpotCheck: 'Spot Check', filterEvent: 'เหตุการณ์', searchPlaceholder: 'ค้นหา รหัส, เจ้าหน้าที่, สถานที่...', search: 'ค้นหา', reset: 'รีเซ็ต', tableNo: 'ลำดับ', tableCode: 'รหัส', tableTitle: 'รายการ', tableOfficer: 'เจ้าหน้าที่', tableStatus: 'สถานะ', tableActions: 'เครื่องมือ', play: 'เล่น', archive: 'จัดเก็บ', archived: 'จัดเก็บแล้ว', download: 'ดาวน์โหลด', close: 'ปิด', aiAlert: 'เตือนจาก AI', normal: 'ปกติ', allOfficers: 'ทั้งหมด', allSpotChecks: 'ทั้งหมด', allEvents: 'ทั้งหมด', videoDetails: 'รายละเอียดวิดีโอ', location: 'สถานที่', dateTime: 'วันที่-เวลา', duration: 'ระยะเวลา', itemsPerPage: 'แสดงต่อหน้า', showing: 'แสดง', of: 'จาก', items: 'รายการ', to: 'ถึง', startDate: 'วันที่เริ่มต้น', endDate: 'วันที่สิ้นสุด', noData: 'ไม่พบข้อมูล', noDataMessage: 'ไม่พบข้อมูลที่ตรงกับการค้นหา กรุณาลองใหม่อีกครั้ง', additionalInfo: 'ข้อมูลกำกับ', mission: 'ภารกิจ', time: 'เวลา', usageLog: 'บันทึกการใช้งาน', viewedBy: 'เปิดดูโดย', sendCase: 'ส่งออก', backToMain: 'กลับหน้าหลัก' },
-    en: { title: 'Video Library', listTitle: 'Video List', filterDate: 'Date', filterOfficer: 'Officer', filterSpotCheck: 'Spot Check', filterEvent: 'Event', searchPlaceholder: 'Search code, officer, location...', search: 'Search', reset: 'Reset', tableNo: 'No.', tableCode: 'Code', tableTitle: 'Title', tableOfficer: 'Officer', tableStatus: 'Status', tableActions: 'Actions', play: 'Play', archive: 'Archive', archived: 'Archived', download: 'Download', close: 'Close', aiAlert: 'AI Alert', normal: 'Normal', allOfficers: 'All', allSpotChecks: 'All', allEvents: 'All', videoDetails: 'Video Details', location: 'Location', dateTime: 'Date-Time', duration: 'Duration', itemsPerPage: 'Items per page', showing: 'Showing', of: 'of', items: 'items', to: 'to', startDate: 'Start Date', endDate: 'End Date', noData: 'No Data', noDataMessage: 'No data found matching your search, please try again.', additionalInfo: 'Additional Information', mission: 'Mission', time: 'Time', usageLog: 'Usage Log', viewedBy: 'Viewed by', sendCase: 'Send Case', backToMain: 'Back to Main' },
-  };
+  const filteredData = videos.filter((video) => {
+    // ป้องกัน Error จากค่า null ตอนทำ Search
+    const safeMissionId = video.missionId || '';
+    const safeMissionName = video.missionName || '';
+    const safeOfficerName = video.officerName || '';
+    const safeLocation = video.location || '';
 
-  const translations = t[language];
-
-  // Map Data Text Language
-  const mappedVideos = videos.map(v => ({
-    ...v,
-    statusText: v.status === 'ai-alert' ? translations.aiAlert : translations.normal
-  }));
-
-  // Filter data
-  const filteredData = mappedVideos.filter((video) => {
-    const matchesSearch = video.code.toLowerCase().includes(searchQuery.toLowerCase()) || video.title.toLowerCase().includes(searchQuery.toLowerCase()) || video.officerName.toLowerCase().includes(searchQuery.toLowerCase()) || video.location.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = 
+      safeMissionId.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      safeMissionName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      safeOfficerName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      safeLocation.toLowerCase().includes(searchQuery.toLowerCase());
+      
     const matchesOfficer = selectedOfficer === 'all' || video.officerName === selectedOfficer;
-    const matchesSpotCheck = selectedSpotCheck === 'all' || video.code === selectedSpotCheck;
-    const matchesEvent = selectedEvent === 'all' || video.status === selectedEvent;
+    const matchesSpotCheck = selectedSpotCheck === 'all' || video.missionId === selectedSpotCheck;
     
     let matchesDate = true;
     if (startDate && endDate) {
-      const videoDate = new Date(video.date);
+      const videoDate = new Date(video.startTime.split('T')[0]);
       const start = new Date(startDate);
       const end = new Date(endDate);
       matchesDate = videoDate >= start && videoDate <= end;
     }
-    return matchesSearch && matchesOfficer && matchesSpotCheck && matchesEvent && matchesDate;
+    
+    return matchesSearch && matchesOfficer && matchesSpotCheck && matchesDate;
   });
 
   // Pagination
@@ -61,14 +60,13 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
     setCurrentPage(page);
   };
 
-  const handlePlayVideo = (video: VideoItem) => {
+  const handlePlayVideo = (video: VideoLibrarySqlData) => {
     setSelectedVideo(video);
     setShowVideoModal(true);
   };
 
   const handleArchiveVideo = (videoId: string) => {
     setVideos(videos.map(v => v.id === videoId ? { ...v, isArchived: !v.isArchived } : v));
-    // ถ้ากำลังเปิด Modal อยู่แล้วกด Archive ให้มันอัปเดต state ตัวที่เลือกด้วย
     if (selectedVideo && selectedVideo.id === videoId) {
       setSelectedVideo({ ...selectedVideo, isArchived: !selectedVideo.isArchived });
     }
@@ -90,6 +88,15 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
     return pages;
   };
 
+  const formatDate = (isoString: string) => {
+    if (!isoString || !isoString.includes('T')) return isoString;
+    return new Date(isoString).toLocaleDateString('th-TH');
+  };
+  const formatTime = (isoString: string) => {
+    if (!isoString || !isoString.includes('T')) return isoString;
+    return isoString.split('T')[1].substring(0, 5);
+  };
+
   return (
     <div className="space-y-6">
       {/* Title Header */}
@@ -100,7 +107,7 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
               {translations.listTitle}
             </h2>
             <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {language === 'th' ? `แสดงข้อมูลทั้งหมด ${filteredData.length} รายการ` : `Showing ${filteredData.length} items`}
+              {translations.showingAllItems} {filteredData.length} {translations.items}
             </p>
           </div>
         </div>
@@ -108,7 +115,7 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
 
       {/* Filters */}
       <div className={`rounded-xl shadow-lg p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
             <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{translations.startDate}</label>
             <div className="relative">
@@ -129,9 +136,10 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
               <User className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
               <select value={selectedOfficer} onChange={(e) => setSelectedOfficer(e.target.value)} className={`w-full pl-10 pr-10 py-2.5 rounded-lg border appearance-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 focus:border-[#0c274b]'} focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 transition-all cursor-pointer`}>
                 <option value="all">{translations.allOfficers}</option>
-                <option value="สมชาย">ร.อ.อ. สมชาย</option>
-                <option value="วิจิตร">พ.ต.ท. วิจิตร</option>
-                <option value="มนตรี">จ.ส.ท. มนตรี</option>
+                {/* 🚀 2. อัปเดตรายชื่อให้ตรงกับ Mock Data ใหม่ */}
+                <option value="ส.ต.อ. สมชาย รักดี">ส.ต.อ. สมชาย รักดี</option>
+                <option value="จ.ส.ต. สมเกียรติ กล้าหาญ">จ.ส.ต. สมเกียรติ กล้าหาญ</option>
+                <option value="ด.ต. วีระยุทธ มั่นคง">ด.ต. วีระยุทธ มั่นคง</option>
               </select>
               <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             </div>
@@ -142,23 +150,10 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
               <MapPin className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
               <select value={selectedSpotCheck} onChange={(e) => setSelectedSpotCheck(e.target.value)} className={`w-full pl-10 pr-10 py-2.5 rounded-lg border appearance-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 focus:border-[#0c274b]'} focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 transition-all cursor-pointer`}>
                 <option value="all">{translations.allSpotChecks}</option>
-                <option value="SC-001">SC-001</option>
-                <option value="SC-002">SC-002</option>
-                <option value="SC-003">SC-003</option>
-                <option value="SC-004">SC-004</option>
-                <option value="SC-005">SC-005</option>
-              </select>
-              <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-            </div>
-          </div>
-          <div>
-            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{translations.filterEvent}</label>
-            <div className="relative">
-              <AlertTriangle className={`absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-              <select value={selectedEvent} onChange={(e) => setSelectedEvent(e.target.value)} className={`w-full pl-10 pr-10 py-2.5 rounded-lg border appearance-none ${darkMode ? 'bg-gray-700 border-gray-600 text-white focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 focus:border-[#0c274b]'} focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 transition-all cursor-pointer`}>
-                <option value="all">{translations.allEvents}</option>
-                <option value="ai-alert">{translations.aiAlert}</option>
-                <option value="normal">{translations.normal}</option>
+                {/* 🚀 3. อัปเดตรหัส Activity ให้ตรงกับ Mock Data ใหม่ */}
+                <option value="ACT-69001">ACT-69001</option>
+                <option value="ACT-69000">ACT-69000</option>
+                <option value="ACT-68999">ACT-68999</option>
               </select>
               <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             </div>
@@ -170,7 +165,7 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
             <Search className={`absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={translations.searchPlaceholder} className={`w-full pl-12 pr-4 py-3 rounded-lg border ${darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-[#fcd500]' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-[#0c274b]'} focus:outline-none focus:ring-2 focus:ring-[#fcd500]/50 transition-all`} />
           </div>
-          <button onClick={() => { setSearchQuery(''); setStartDate(''); setEndDate(''); setSelectedOfficer('all'); setSelectedSpotCheck('all'); setSelectedEvent('all'); setCurrentPage(1); }} className={`px-6 py-3 rounded-lg transition-all font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2 whitespace-nowrap cursor-pointer ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}>
+          <button onClick={() => { setSearchQuery(''); setStartDate(''); setEndDate(''); setSelectedOfficer('all'); setSelectedSpotCheck('all'); setCurrentPage(1); }} className={`px-6 py-3 rounded-lg transition-all font-medium shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2 whitespace-nowrap cursor-pointer ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}>
             <X className="w-5 h-5" />
             <span>{translations.reset}</span>
           </button>
@@ -196,7 +191,6 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
                     <th className="px-4 py-3 text-left text-sm font-semibold text-white border-r border-white/10">{translations.tableCode}</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-white border-r border-white/10">{translations.tableTitle}</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-white border-r border-white/10">{translations.tableOfficer}</th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-white border-r border-white/10">{translations.tableStatus}</th>
                     <th className="px-4 py-3 text-center text-sm font-semibold text-white w-56">{translations.tableActions}</th>
                   </tr>
                 </thead>
@@ -206,24 +200,36 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
                       <td className={`px-4 py-4 text-center border-r ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-200 text-gray-600'}`}>
                         {startIndex + index + 1}
                       </td>
-                      <td className={`px-4 py-4 whitespace-nowrap text-sm font-bold border-r ${darkMode ? 'border-gray-600 text-[#fcd500]' : 'border-gray-200 text-[#0c274b]'}`}>
-                        {video.code}
+                      <td className={`px-4 py-4 whitespace-nowrap text-sm font-bold border-r ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+                        {/* 🚀 4. ดักเช็คแสดงรหัส หรือขึ้นป้าย N/A กรณีฉุกเฉิน */}
+                        {video.missionId ? (
+                          <span className={darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}>{video.missionId}</span>
+                        ) : (
+                          <span className="text-red-500">N/A</span>
+                        )}
                       </td>
                       <td className={`px-4 py-4 text-sm border-r ${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-900'}`}>
                         <div>
-                          <div className="font-medium">{video.title}</div>
+                          {/* 🚀 5. แสดงชื่อแผนงาน หรือปุ่มผูกแผนงาน */}
+                          {video.missionName ? (
+                            <div className="font-medium">{video.missionName}</div>
+                          ) : (
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-md border border-red-200">
+                                วิดีโอฉุกเฉิน (Unassigned)
+                              </span>
+                              <button className="text-xs text-blue-500 hover:text-blue-700 hover:underline cursor-pointer">
+                                + ผูกแผนงาน
+                              </button>
+                            </div>
+                          )}
                           <div className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
-                            {video.date} {video.time} • {video.duration}
+                            {formatDate(video.startTime)} {formatTime(video.startTime)} • {video.duration}
                           </div>
                         </div>
                       </td>
                       <td className={`px-4 py-4 whitespace-nowrap text-sm border-r ${darkMode ? 'border-gray-600 text-gray-300' : 'border-gray-200 text-gray-900'}`}>
-                        {video.officer} {video.officerName}
-                      </td>
-                      <td className={`px-4 py-4 text-center border-r ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${video.status === 'ai-alert' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
-                          {video.statusText}
-                        </span>
+                        {video.officerId} {video.officerName}
                       </td>
                       <td className="px-4 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
@@ -250,14 +256,24 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-sm font-bold ${darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}`}>{video.code}</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${video.status === 'ai-alert' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'}`}>
-                          {video.statusText}
-                        </span>
+                        {video.missionId ? (
+                          <span className={`text-sm font-bold ${darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}`}>{video.missionId}</span>
+                        ) : (
+                          <span className="text-sm font-bold text-red-500">N/A</span>
+                        )}
                       </div>
-                      <div className={`text-sm font-medium mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{video.title}</div>
-                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{video.officer} {video.officerName}</div>
-                      <div className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>{video.date} {video.time} • {video.duration}</div>
+                      
+                      {video.missionName ? (
+                        <div className={`text-sm font-medium mb-1 ${darkMode ? 'text-white' : 'text-gray-900'}`}>{video.missionName}</div>
+                      ) : (
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-md">วิดีโอฉุกเฉิน</span>
+                          <button className="text-xs text-blue-500 hover:underline cursor-pointer">+ ผูกแผนงาน</button>
+                        </div>
+                      )}
+
+                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{video.officerId} {video.officerName}</div>
+                      <div className={`text-xs mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>{formatDate(video.startTime)} {formatTime(video.startTime)} • {video.duration}</div>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -308,7 +324,7 @@ export function VideoLibrary({ darkMode, language }: VideoLibraryProps) {
         onClose={() => setShowVideoModal(false)} 
         onArchive={handleArchiveVideo} 
         translations={translations} 
-        language={language} 
+        language={language}
         darkMode={darkMode} 
       />
 

@@ -1,16 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { X, Play, Pause, Volume2, VolumeX, Maximize, Circle, Clock, Video, MapPin, Calendar, AlertTriangle } from 'lucide-react';
-import type { LiveFeedItem } from '../../data/liveFeedMockData';
+import { X, Play, Pause, Volume2, VolumeX, Maximize, Circle, Clock, Video, MapPin, Calendar, AlertTriangle, User } from 'lucide-react';
+import type { LiveFeedSqlData } from '../../data/liveFeedMockData';
 import Hls from 'hls.js';
 
-// ==========================================
-// Types & Interfaces
-// ==========================================
 export type TranslationsType = Record<string, string>;
 
 export interface VideoModalProps {
   show: boolean;
-  feed: LiveFeedItem | null;
+  feed: LiveFeedSqlData | null;
   onClose: () => void;
   translations: TranslationsType;
   language: 'th' | 'en';
@@ -22,7 +19,7 @@ export interface VideoModalProps {
 
 export interface DetailsModalProps {
   show: boolean;
-  feed: LiveFeedItem | null;
+  feed: LiveFeedSqlData | null;
   onClose: () => void;
   onOpenVideo: () => void;
   getStatusColor: (status: string) => string;
@@ -59,6 +56,7 @@ export function LiveFeedVideoModal({ show, feed, onClose, translations, language
             headers: { 'Content-Type': 'application/json;charset=UTF-8' },
             body: JSON.stringify({
               User: "true",
+              // บังคับใช้รหัสกล้องของจริงเพื่อให้ระบบทดสอบส่งภาพมาได้
               deviceCode: "1000093", 
               channelId: "1000093$1$0$0"
             })
@@ -94,7 +92,6 @@ export function LiveFeedVideoModal({ show, feed, onClose, translations, language
       return () => { isCancelled = true; };
     }
   }, [show, feed, language]);
-
 
   useEffect(() => {
     let hls: Hls;
@@ -152,7 +149,8 @@ export function LiveFeedVideoModal({ show, feed, onClose, translations, language
               <span className="text-white font-bold">{translations.live}</span>
             </div>
             <h2 className="text-xl font-bold text-white">
-              {language === 'th' ? 'ภาพสดจากกล้อง' : 'Live Camera'} - 001
+              {/* 🚀 อัปเดตใช้ deviceId */}
+              {translations.liveStream} - {feed.deviceId}
             </h2>
           </div>
           <button onClick={onClose} className="text-white/80 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-lg shrink-0 cursor-pointer z-50">
@@ -173,7 +171,7 @@ export function LiveFeedVideoModal({ show, feed, onClose, translations, language
                       <AlertTriangle className="w-20 h-20 text-red-500 mx-auto" />
                       <p className="text-white text-xl font-bold">{apiError}</p>
                       <button onClick={onClose} className="mt-4 px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer">
-                        {language === 'th' ? 'ปิดหน้าต่าง' : 'Close'}
+                        {translations.close}
                       </button>
                     </>
                   ) : (
@@ -184,7 +182,7 @@ export function LiveFeedVideoModal({ show, feed, onClose, translations, language
                           {language === 'th' ? 'กำลังดึงภาพสด...' : 'Connecting to live feed...'}
                         </p>
                         <p className="text-yellow-400 text-sm font-medium animate-pulse mt-2">
-                          (โปรดรอสักครู่ กล้องกำลังเตรียมการส่งสัญญาณ)
+                          {language === 'th' ? '(โปรดรอสักครู่ กล้องกำลังเตรียมการส่งสัญญาณ)' : '(Please wait, the camera is preparing the stream)'}
                         </p>
                       </div>
                       <div className="flex justify-center gap-2 mt-6">
@@ -218,7 +216,8 @@ export function LiveFeedVideoModal({ show, feed, onClose, translations, language
             <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/60 text-white rounded-lg backdrop-blur-sm z-20 pointer-events-none">
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="w-4 h-4" />
-                <span className="font-mono">{feed.time}</span>
+                {/* 🚀 ดึงเฉพาะเวลาจาก startTime อย่างปลอดภัย */}
+                <span className="font-mono">{feed.startTime?.includes('T') ? feed.startTime.split('T')[1].substring(0, 5) : feed.startTime}</span>
               </div>
             </div>
 
@@ -263,6 +262,16 @@ export function LiveFeedVideoModal({ show, feed, onClose, translations, language
 export function LiveFeedDetailsModal({ show, feed, onClose, onOpenVideo, getStatusColor, translations, language, darkMode }: DetailsModalProps) {
   if (!show || !feed) return null;
 
+  // 🚀 สร้างฟังก์ชันช่วยดึง Text สถานะเพราะ statusText ถูกลบทิ้งไปแล้ว
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'online': return translations.statusOnline || (language === 'th' ? 'ออนไลน์' : 'Online');
+      case 'maintenance': return translations.statusMaintenance || (language === 'th' ? 'ซ่อมบำรุง' : 'Maintenance');
+      case 'offline': return translations.statusOffline || (language === 'th' ? 'ออฟไลน์' : 'Offline');
+      default: return translations.na || 'N/A';
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
       <div className={`w-full max-w-6xl max-h-[95vh] flex flex-col rounded-2xl shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
@@ -272,9 +281,17 @@ export function LiveFeedDetailsModal({ show, feed, onClose, onOpenVideo, getStat
               <h2 className={`text-lg font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
                 {translations.detailsTitle}
               </h2>
-              <div className={`px-3 py-1 rounded-lg font-bold ${darkMode ? 'bg-[#0c274b] text-[#fcd500]' : 'bg-[#0c274b] text-[#fcd500]'}`}>
-                {feed.code}
-              </div>
+              {/* 🚀 รองรับกรณีไม่มี missionId (โหมดฉุกเฉิน) */}
+              {feed.missionId ? (
+                <div className={`px-3 py-1 rounded-lg font-bold ${darkMode ? 'bg-[#0c274b] text-[#fcd500]' : 'bg-[#0c274b] text-[#fcd500]'}`}>
+                  {feed.missionId}
+                </div>
+              ) : (
+                <div className="px-3 py-1 bg-red-100 text-red-700 text-sm font-bold rounded-lg border border-red-200">
+                  {translations.unassigned}
+                </div>
+              )}
+              
               {feed.isLive && (
                 <div className="flex items-center gap-1.5 px-2.5 py-1 bg-red-500 text-white text-xs font-bold rounded-lg animate-pulse">
                   <Circle className="w-2 h-2 fill-white" />
@@ -290,46 +307,52 @@ export function LiveFeedDetailsModal({ show, feed, onClose, onOpenVideo, getStat
 
         <div className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 p-6">
+            
+            {/* ซ้าย: วิดีโอจำลอง */}
             <div className="lg:col-span-3 space-y-4">
               <div className={`rounded-lg overflow-hidden aspect-video ${darkMode ? 'bg-gray-800' : 'bg-gray-200'}`}>
                 <div className="w-full h-full flex items-center justify-center bg-linear-to-br from-gray-700 via-gray-600 to-gray-700 relative">
                   <div className="text-center space-y-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video w-16 h-16 text-gray-400 mx-auto" aria-hidden="true">
-                      <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path>
-                      <rect x="2" y="6" width="14" height="12" rx="2"></rect>
-                    </svg>
+                    <Video className="w-16 h-16 text-gray-400 mx-auto" />
                     <p className="text-lg font-medium text-gray-300">{translations.cameraFeed}</p>
-                    <p className="text-sm text-gray-400">{language === 'th' ? 'กล้อง' : 'Camera'} {feed.cameraId}</p>
+                    <p className="text-sm text-gray-400">{translations.camera} #{feed.deviceId}</p>
                   </div>
                   
                   {feed.isLive && (
                     <div className="absolute top-3 left-3 flex items-center gap-2 px-3 py-1.5 bg-red-500 text-white rounded-lg">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-circle w-3 h-3 fill-white animate-pulse" aria-hidden="true">
-                        <circle cx="12" cy="12" r="10"></circle>
-                      </svg>
+                      <Circle className="w-3 h-3 fill-white animate-pulse" />
                       <span className="font-bold text-sm">{translations.live}</span>
                     </div>
                   )}
 
                   <div className="absolute bottom-3 right-3 px-3 py-1.5 bg-black/60 text-white rounded-lg backdrop-blur-sm">
                     <div className="flex items-center gap-2 text-sm">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video w-4 h-4 text-white" aria-hidden="true">
-                        <path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"></path>
-                        <rect x="2" y="6" width="14" height="12" rx="2"></rect>
-                      </svg>
-                      <span className="font-mono">{feed.cameraId}</span>
+                      <Video className="w-4 h-4 text-white" />
+                      <span className="font-mono">{feed.deviceId}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
+              {/* รายละเอียดภารกิจ (Mission Details) */}
               <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                <p className={`text-sm font-medium mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  {language === 'th' ? 'รายละเอียดภารกิจ' : 'Mission Details'}
+                <div className="flex items-center justify-between mb-2">
+                  <p className={`text-sm font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                    {language === 'th' ? 'รายละเอียดภารกิจ' : 'Mission Details'}
+                  </p>
+                  {/* 🚀 ปุ่มเพิ่มแผนงานสำหรับกรณีฉุกเฉิน */}
+                  {!feed.missionName && (
+                    <button className="text-sm font-bold text-blue-500 hover:text-blue-700 hover:underline cursor-pointer">
+                      {translations.assignActivity}
+                    </button>
+                  )}
+                </div>
+                
+                {/* 🚀 รองรับกรณีไม่มี missionName */}
+                <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'} ${!feed.missionName ? 'text-red-500 italic' : ''}`}>
+                  {feed.missionName || translations.unassigned}
                 </p>
-                <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {feed.title}
-                </p>
+                
                 <div className="flex flex-wrap items-center gap-4 mt-3 text-sm">
                   <div className="flex items-center gap-1.5">
                     <MapPin className={`w-4 h-4 ${darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}`} />
@@ -337,26 +360,31 @@ export function LiveFeedDetailsModal({ show, feed, onClose, onOpenVideo, getStat
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Calendar className={`w-4 h-4 ${darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}`} />
-                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{feed.date}</span>
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                      {feed.startTime?.includes('T') ? new Date(feed.startTime).toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US') : feed.startTime}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className={`w-4 h-4 ${darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}`} />
-                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{feed.time}</span>
+                    <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                      {feed.startTime?.includes('T') ? feed.startTime.split('T')[1].substring(0, 5) : feed.startTime}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
+            {/* ขวา: ข้อมูลเจ้าหน้าที่ และสถานะ */}
             <div className="lg:col-span-2 space-y-3">
               <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                 <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{translations.detailsOfficer}</p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-linear-to-br from-[#fcd500] to-[#fed300] rounded-full flex items-center justify-center shrink-0">
-                    <span className="text-[#0c274b] font-bold text-lg">{feed.officer}</span>
+                    <User className="w-5 h-5 text-[#0c274b]" />
                   </div>
                   <div className="flex-1">
                     <p className={`font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{feed.officerName}</p>
-                    <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{language === 'th' ? 'รหัส' : 'Code'} {feed.officer}</p>
+                    <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{language === 'th' ? 'รหัสประจำตัว' : 'Officer ID'} : {feed.officerId}</p>
                   </div>
                 </div>
               </div>
@@ -364,8 +392,12 @@ export function LiveFeedDetailsModal({ show, feed, onClose, onOpenVideo, getStat
               <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
                 <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{translations.detailsTask}</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <div className={`px-3 py-1.5 rounded-lg font-bold ${darkMode ? 'bg-[#0c274b] text-[#fcd500]' : 'bg-[#0c274b] text-[#fcd500]'}`}>{feed.code}</div>
-                  <span className={`px-3 py-1.5 rounded-lg text-sm font-bold border ${getStatusColor(feed.status)}`}>{feed.statusText}</span>
+                  <div className={`px-3 py-1.5 rounded-lg font-bold ${darkMode ? 'bg-[#0c274b] text-[#fcd500]' : 'bg-[#0c274b] text-[#fcd500]'}`}>
+                    {feed.missionId || translations.na}
+                  </div>
+                  <span className={`px-3 py-1.5 rounded-lg text-sm font-bold border ${getStatusColor(feed.deviceStatus)}`}>
+                    {getStatusText(feed.deviceStatus)}
+                  </span>
                 </div>
               </div>
 
@@ -373,7 +405,7 @@ export function LiveFeedDetailsModal({ show, feed, onClose, onOpenVideo, getStat
                 <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{translations.camera}</p>
                 <div className="flex items-center gap-2">
                   <Video className={`w-5 h-5 ${darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}`} />
-                  <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>{language === 'th' ? 'กล้อง' : 'Camera'} #{feed.cameraId}</p>
+                  <p className={`font-bold text-lg ${darkMode ? 'text-white' : 'text-gray-900'}`}>#{feed.deviceId}</p>
                 </div>
               </div>
 
@@ -385,16 +417,10 @@ export function LiveFeedDetailsModal({ show, feed, onClose, onOpenVideo, getStat
                 </div>
               </div>
 
-              <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-100'}`}>
-                <p className={`text-sm mb-2 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{translations.detailsUsageLog}</p>
-                <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>{translations.detailsOpenedBy} <span className="font-bold">Admin</span></p>
-                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{feed.date} {translations.detailsTime} {feed.time}</p>
-              </div>
-
               <div className="space-y-2 pt-2">
                 <button onClick={onOpenVideo} className="w-full px-6 py-3 bg-linear-to-r from-[#fcd500] to-[#fed300] hover:from-[#fed300] hover:to-[#fcd500] text-[#0c274b] font-bold rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer">
                   <Video className="w-5 h-5" />
-                  <span>{language === 'th' ? 'เปิดดูภาพสด' : 'View Live Feed'}</span>
+                  <span>{translations.viewLive}</span>
                 </button>
                 <button onClick={onClose} className="w-full px-6 py-3 bg-black text-white font-bold rounded-lg transition-all shadow-md hover:shadow-lg hover:bg-gray-900 cursor-pointer">
                   {translations.backToMain}

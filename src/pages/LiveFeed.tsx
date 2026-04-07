@@ -1,117 +1,44 @@
 import { useState, useEffect } from 'react';
 import { Wifi, WifiOff, Circle, MapPin, User, Video, Calendar, Radio } from 'lucide-react';
-import { type LiveFeedItem, allLiveFeedData } from '../data/liveFeedMockData';
-import { LiveFeedVideoModal, LiveFeedDetailsModal, type TranslationsType } from '../components/modals/LiveFeedModals';
+import { type LiveFeedSqlData, initialLiveFeedData } from '../data/liveFeedMockData';
+import { LiveFeedVideoModal, LiveFeedDetailsModal } from '../components/modals/LiveFeedModals';
+import { liveFeedTranslations, type SupportedLanguage } from '../locales/liveFeedTranslations';
 
 interface LiveFeedProps {
   darkMode: boolean;
-  language: 'th' | 'en';
+  language: SupportedLanguage;
 }
 
 export function LiveFeed({ darkMode, language }: LiveFeedProps) {
-  const [selectedFeed, setSelectedFeed] = useState<LiveFeedItem | null>(null);
+  const [selectedFeed, setSelectedFeed] = useState<LiveFeedSqlData | null>(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
 
-  const t: Record<string, TranslationsType> = {
-    th: {
-      title: 'ภาพสด',
-      subtitle: 'รายการภาพสดและควบคุมการเชื่อมต่อกล้องวีดีโอ',
-      tableCode: 'รายการ',
-      tableStatus: 'สถานะ',
-      tableTools: 'เครื่องมือ',
-      statusActive: 'กำลังดำเนินการ',
-      statusWaiting: 'รอดำเนินการ',
-      statusOffline: 'ออฟไลน์',
-      connect: 'เชื่อมต่อ',
-      disconnect: 'ตัดการเชื่อมต่อ',
-      viewLive: 'ดูภาพสด',
-      noData: 'ไม่พบข้อมูล',
-      liveStream: 'ภาพสดจากกล้อง',
-      close: 'ปิด',
-      officer: 'เจ้าหน้าที่',
-      location: 'สถานที่',
-      camera: 'กล้อง',
-      date: 'วันที่',
-      time: 'เวลา',
-      live: 'สด',
-      play: 'เล่น',
-      pause: 'หยุด',
-      mute: 'ปิดเสียง',
-      unmute: 'เปิดเสียง',
-      fullscreen: 'เต็มจอ',
-      detailsTitle: 'รายการกล้องที่คัดและสามารถเปิดได้',
-      detailsOfficer: 'เจ้าหน้าที่ :',
-      detailsTask: 'ภารกิจ :',
-      detailsRecordStatus: 'สถานการณ์บันทึก :',
-      detailsRecording: 'กำลังบันทึก',
-      detailsUsageLog: 'บันทึกการใช้งาน :',
-      detailsOpenedBy: 'เปิดคู่โดย',
-      detailsTime: 'เวลา',
-      backToMain: 'กลับหน้าหลัก',
-      cameraFeed: 'ภาพจากกล้อง',
-    },
-    en: {
-      title: 'Live Feed',
-      subtitle: 'Live feed and video camera connection control',
-      tableCode: 'Code',
-      tableStatus: 'Status',
-      tableTools: 'Tools',
-      statusActive: 'Active',
-      statusWaiting: 'Waiting',
-      statusOffline: 'Offline',
-      connect: 'Connect',
-      disconnect: 'Disconnect',
-      viewLive: 'View Live',
-      noData: 'No data found',
-      liveStream: 'Live Camera Feed',
-      close: 'Close',
-      officer: 'Officer',
-      location: 'Location',
-      camera: 'Camera',
-      date: 'Date',
-      time: 'Time',
-      live: 'Live',
-      play: 'Play',
-      pause: 'Pause',
-      mute: 'Mute',
-      unmute: 'Unmute',
-      fullscreen: 'Fullscreen',
-      detailsTitle: 'Available Camera List',
-      detailsOfficer: 'Officer :',
-      detailsTask: 'Task :',
-      detailsRecordStatus: 'Recording Status :',
-      detailsRecording: 'Recording',
-      detailsUsageLog: 'Usage Log :',
-      detailsOpenedBy: 'Opened by',
-      detailsTime: 'at',
-      backToMain: 'Back to Main',
-      cameraFeed: 'Camera Feed',
-    },
-  };
+  const t = liveFeedTranslations[language];
 
-  const translations = t[language];
-
-  // Map status text securely
-  const liveFeedData = allLiveFeedData.map(item => ({
-    ...item,
-    statusText: item.status === 'active' ? translations.statusActive : 
-                item.status === 'waiting' ? translations.statusWaiting : 
-                translations.statusOffline
-  }));
+  const liveFeedData = initialLiveFeedData;
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-[oklch(72.3%_0.219_149.579)] text-white border-[oklch(72.3%_0.219_149.579)]';
-      case 'waiting': return 'bg-[oklch(72.3%_0.219_149.579)] text-white border-[oklch(72.3%_0.219_149.579)]'; // สีอิงตามต้นฉบับ
-      case 'offline': return 'bg-gray-500 text-white border-gray-600';
+      case 'online': return 'bg-green-500 text-white border-green-600';
+      case 'maintenance': return 'bg-yellow-500 text-white border-yellow-600';
+      case 'offline': return 'bg-red-500 text-white border-red-600';
       default: return 'bg-gray-500 text-white border-gray-600';
     }
   };
 
-  const handleConnect = (item: LiveFeedItem) => {
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'online': return t.statusOnline;
+      case 'maintenance': return t.statusMaintenance;
+      case 'offline': return t.statusOffline;
+      default: return 'Unknown';
+    }
+  };
+
+  const handleConnect = (item: LiveFeedSqlData) => {
     setSelectedFeed(item);
     setShowDetailsModal(true);
   };
@@ -136,7 +63,6 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
   const togglePlay = () => setIsPlaying(!isPlaying);
   const toggleMute = () => setIsMuted(!isMuted);
 
-  // Lock body scroll when modals are open
   useEffect(() => {
     if (showDetailsModal || showVideoModal) {
       const scrollY = window.scrollY;
@@ -161,15 +87,15 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-[#0c274b]'}`}>
-              {translations.title}
+              {t.title}
             </h2>
             <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              {translations.subtitle}
+              {t.subtitle}
             </p>
           </div>
           <div className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg">
             <Radio className="w-5 h-5 animate-pulse" />
-            <span className="font-bold">{translations.live}</span>
+            <span className="font-bold">{t.live}</span>
           </div>
         </div>
       </div>
@@ -181,13 +107,13 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
             <thead>
               <tr className="bg-linear-to-r from-blue-500 to-blue-600">
                 <th className="px-6 py-3 text-left text-sm font-semibold text-white border-r border-white/10">
-                  {translations.tableCode}
+                  {t.tableCode}
                 </th>
                 <th className="px-6 py-3 text-center text-sm font-semibold text-white border-r border-white/10">
-                  {translations.tableStatus}
+                  {t.tableStatus}
                 </th>
                 <th className="px-6 py-3 text-center text-sm font-semibold text-white">
-                  {translations.tableTools}
+                  {t.tableTools}
                 </th>
               </tr>
             </thead>
@@ -196,7 +122,7 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
                 <tr>
                   <td colSpan={3} className="px-6 py-12 text-center">
                     <div className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {translations.noData}
+                      {t.noData}
                     </div>
                   </td>
                 </tr>
@@ -216,21 +142,38 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
                   >
                     <td className={`px-6 py-4 border-r ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                       <div className="space-y-2">
+                        {/* 🚀 รองรับกรณีไม่มี missionId (กรณีฉุกเฉิน) */}
                         <div className="flex items-center gap-2">
-                          <p className={`font-bold text-lg ${darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}`}>
-                            {item.code}
-                          </p>
+                          {item.missionId ? (
+                            <p className={`font-bold text-lg ${darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}`}>
+                              {item.missionId} 
+                            </p>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-md border border-red-200">
+                              {t.unassigned}
+                            </span>
+                          )}
+                          
                           {item.isLive && (
                             <span className="flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded">
                               <Circle className="w-2 h-2 fill-white animate-pulse" />
-                              {translations.live}
+                              {t.live}
                             </span>
                           )}
                         </div>
-                        <p className={`text-sm ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                          {item.title}
-                        </p>
-                        <div className="flex flex-wrap gap-3 text-sm">
+                        
+                        {/* 🚀 รองรับกรณีไม่มี missionName */}
+                        {item.missionName ? (
+                          <p className={`text-sm font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                            {item.missionName}
+                          </p>
+                        ) : (
+                          <button className="text-sm font-medium text-blue-500 hover:text-blue-700 hover:underline cursor-pointer">
+                            {t.assignActivity}
+                          </button>
+                        )}
+                        
+                        <div className="flex flex-wrap gap-3 text-sm mt-2">
                           <div className="flex items-center gap-1.5">
                             <User className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                             <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
@@ -246,7 +189,7 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
                           <div className="flex items-center gap-1.5">
                             <Video className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                             <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                              {language === 'th' ? 'กล้อง' : 'Camera'} {item.cameraId}
+                              {t.camera} {item.deviceId}
                             </span>
                           </div>
                         </div>
@@ -255,8 +198,8 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
 
                     <td className={`px-6 py-4 border-r ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                       <div className="flex justify-center">
-                        <span className={`px-4 py-2 rounded-lg text-sm font-bold border ${getStatusColor(item.status)}`}>
-                          {item.statusText}
+                        <span className={`px-4 py-2 rounded-lg text-sm font-bold border ${getStatusColor(item.deviceStatus)}`}>
+                          {getStatusText(item.deviceStatus)}  
                         </span>
                       </div>
                     </td>
@@ -265,10 +208,15 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
                       <div className="flex justify-center">
                         <button
                           onClick={() => handleConnect(item)}
-                          className="px-6 py-2 bg-linear-to-r from-[#fcd500] to-[#fed300] hover:from-[#fed300] hover:to-[#fcd500] text-[#0c274b] font-bold rounded-lg transition-all shadow-md hover:shadow-lg hover:scale-105 flex items-center gap-2 cursor-pointer"
+                          disabled={item.deviceStatus === 'offline'}
+                          className={`px-6 py-2 font-bold rounded-lg transition-all shadow-md hover:shadow-lg flex items-center gap-2 cursor-pointer ${
+                            item.deviceStatus === 'offline' 
+                              ? 'bg-gray-400 text-gray-200 cursor-not-allowed' 
+                              : 'bg-linear-to-r from-[#fcd500] to-[#fed300] hover:from-[#fed300] hover:to-[#fcd500] text-[#0c274b] hover:scale-105'
+                          }`}
                         >
                           {item.isLive ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
-                          <span>{translations.connect}</span>
+                          <span>{t.connect}</span>
                         </button>
                       </div>
                     </td>
@@ -285,7 +233,7 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
         {liveFeedData.length === 0 ? (
           <div className={`rounded-xl shadow-lg p-12 text-center ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
             <div className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-              {translations.noData}
+              {t.noData}
             </div>
           </div>
         ) : (
@@ -298,17 +246,32 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className="text-white font-bold text-lg">{item.code}</span>
-                      {item.isLive && (
-                        <span className="flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded animate-pulse">
-                          <Circle className="w-2 h-2 fill-white" /> {translations.live}
+                      {/* 🚀 รองรับกรณีฉุกเฉินใน Mobile */}
+                      {item.missionId ? (
+                        <span className="text-white font-bold text-lg">{item.missionId}</span>
+                      ) : (
+                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs font-bold rounded-md">
+                          {t.unassigned}
                         </span>
                       )}
-                      <span className={`px-3 py-1 rounded-lg text-sm font-bold border ml-auto ${getStatusColor(item.status)}`}>
-                        {item.statusText}
+                      
+                      {item.isLive && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded animate-pulse">
+                          <Circle className="w-2 h-2 fill-white" /> {t.live}
+                        </span>
+                      )}
+                      <span className={`px-3 py-1 rounded-lg text-xs font-bold border ml-auto ${getStatusColor(item.deviceStatus)}`}>
+                        {getStatusText(item.deviceStatus)}
                       </span>
                     </div>
-                    <p className="text-white/90 text-sm">{item.title}</p>
+                    {/* 🚀 รองรับกรณีฉุกเฉินใน Mobile */}
+                    {item.missionName ? (
+                      <p className="text-white/90 text-sm font-medium">{item.missionName}</p>
+                    ) : (
+                      <button className="text-white/90 text-sm font-medium underline">
+                        {t.assignActivity}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -332,14 +295,17 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
                   <div className="flex items-center gap-2">
                     <Video className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                     <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                      {language === 'th' ? 'กล้อง' : 'Camera'} {item.cameraId}
+                      {t.camera} {item.deviceId}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <Calendar className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
                     <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
-                      {item.date} {item.time}
+                      {/* จัดรูปแบบให้แสดงวันที่และเวลาสวยงาม */}
+                      {item.startTime.includes('T') 
+                        ? new Date(item.startTime).toLocaleString(language === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'short', timeStyle: 'short' }) 
+                        : item.startTime}
                     </span>
                   </div>
                 </div>
@@ -347,10 +313,15 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
                 <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={() => handleConnect(item)}
-                    className="w-full px-4 py-2.5 bg-linear-to-r from-[#fcd500] to-[#fed300] hover:from-[#fed300] hover:to-[#fcd500] text-[#0c274b] font-bold rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                    disabled={item.deviceStatus === 'offline'}
+                    className={`w-full px-4 py-2.5 font-bold rounded-lg transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer ${
+                      item.deviceStatus === 'offline'
+                        ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                        : 'bg-linear-to-r from-[#fcd500] to-[#fed300] hover:from-[#fed300] hover:to-[#fcd500] text-[#0c274b]'
+                    }`}
                   >
                     {item.isLive ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
-                    <span>{translations.connect}</span>
+                    <span>{t.connect}</span>
                   </button>
                 </div>
               </div>
@@ -359,14 +330,13 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
         )}
       </div>
 
-      {/* --- Modals --- */}
       <LiveFeedDetailsModal 
         show={showDetailsModal} 
         feed={selectedFeed} 
         onClose={handleCloseDetailsModal} 
         onOpenVideo={handleOpenVideo} 
         getStatusColor={getStatusColor} 
-        translations={translations} 
+        translations={t} 
         language={language} 
         darkMode={darkMode} 
       />
@@ -374,7 +344,7 @@ export function LiveFeed({ darkMode, language }: LiveFeedProps) {
         show={showVideoModal} 
         feed={selectedFeed} 
         onClose={handleCloseModal} 
-        translations={translations} 
+        translations={t} 
         language={language} 
         isPlaying={isPlaying} 
         isMuted={isMuted} 

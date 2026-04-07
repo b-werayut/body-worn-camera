@@ -2,7 +2,8 @@ import {
   Camera, Globe, User, LogOut, X, 
   LayoutDashboard, Activity, FileText, Video, FileVideo, Users 
 } from 'lucide-react';
-import { translations, type Language } from '../../data/translations';
+import { translations, type Language } from '../../locales/translations';
+import { Link, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,33 +11,29 @@ interface SidebarProps {
   language: Language;
   setLanguage: (lang: Language) => void;
   darkMode: boolean;
-  currentPage: string;
-  setCurrentPage: (page: string) => void;
   onLogout: () => void;
 }
 
 export function Sidebar({ 
-  isOpen, onClose, language, setLanguage, darkMode, currentPage, setCurrentPage, onLogout 
+  isOpen, onClose, language, setLanguage, darkMode, onLogout 
 }: SidebarProps) {
   
   const t = translations[language];
+  const location = useLocation();
 
-  // ข้อมูลเมนู (เหมือนกับใน Header)
   const navItems = [
-    { id: 'dashboard', label: t.dashboard, icon: LayoutDashboard },
-    { id: 'activities', label: t.activities, icon: Activity },
-    { id: 'reports', label: t.reports, icon: FileText },
-    { id: 'live', label: t.live, icon: Video },
-    { id: 'videos', label: t.videos, icon: FileVideo },
-    { id: 'users', label: t.users, icon: Users },
+    { path: '/dashboard', label: t.dashboard, icon: LayoutDashboard },
+    { path: '/activities', label: t.activities, icon: Activity },
+    { path: '/reports', label: t.reports, icon: FileText },
+    { path: '/live', label: t.live, icon: Video },
+    { path: '/videos', label: t.videos, icon: FileVideo },
+    { path: '/users', label: t.users, icon: Users },
   ];
 
-  // ถ้าไม่ได้เปิดเมนูอยู่ ไม่ต้องแสดงผลอะไร
   if (!isOpen) return null;
 
   return (
     <div className="lg:hidden fixed inset-0 z-50 flex">
-      {/* พื้นหลังสีดำโปร่งแสง (คลิกเพื่อปิด) */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200" 
         onClick={onClose}
@@ -67,15 +64,14 @@ export function Sidebar({
         <div className="p-4 space-y-2 flex-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = currentPage === item.id;
+            // เช็คความ Active จาก URL
+            const isActive = location.pathname.startsWith(item.path);
             
             return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setCurrentPage(item.id);
-                  onClose();
-                }}
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={onClose} // ปิดเมนูมือถือเวลาเลือกเสร็จ
                 className={`w-full flex items-center gap-3 px-5 py-4 rounded-xl font-medium transition-all text-left cursor-pointer ${
                   isActive
                     ? 'bg-linear-to-r from-emerald-500 to-teal-500 text-white shadow-lg'
@@ -87,7 +83,7 @@ export function Sidebar({
                 <Icon className="w-5 h-5" />
                 <span className="flex-1">{item.label}</span>
                 {isActive && <div className="w-2 h-2 bg-white rounded-full"></div>}
-              </button>
+              </Link>
             );
           })}
 

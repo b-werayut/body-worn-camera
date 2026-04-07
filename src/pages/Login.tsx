@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Camera, Eye, EyeOff, AlertCircle, Globe, Sun, Moon, KeyRound, X } from 'lucide-react';
-import { translations, type Language } from '../data/translations';
+import { loginTranslations, type Language } from '../locales/loginTranslations'; 
 
 interface LoginProps {
   language: Language;
@@ -11,7 +11,7 @@ interface LoginProps {
 }
 
 export function Login({ language, setLanguage, darkMode, setDarkMode, onLoginSuccess }: LoginProps) {
-  const t = translations[language];
+  const t = loginTranslations[language];
   
   // State สำหรับหน้า Login หลัก
   const [username, setUsername] = useState('');
@@ -25,14 +25,17 @@ export function Login({ language, setLanguage, darkMode, setDarkMode, onLoginSuc
   const [resetNewPassword, setResetNewPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!username || !password) { setError('invalid'); return; }
-    if (username.toLowerCase() === 'disabled') { setError('disabled'); return; }
-    if (username !== 'admin' || password !== 'admin') { setError('invalid'); return; }
     
-    setError(null);
-    onLoginSuccess(); 
+    if (username.toLowerCase() === 'disabled') { setError('disabled'); return; }
+    
+    const mockToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...";
+    localStorage.setItem('auth_token', mockToken);
+    localStorage.setItem('login_timestamp', Date.now().toString());
+
+    onLoginSuccess();
   };
 
   const handleResetPassword = () => {
@@ -203,11 +206,17 @@ export function Login({ language, setLanguage, darkMode, setDarkMode, onLoginSuc
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className={`w-full max-w-md flex flex-col rounded-2xl shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
             {/* Header */}
-            <div className="bg-linear-to-r from-[#0c274b] to-[#0a1f3a] px-6 py-4 shrink-0">
+            <div className="bg-linear-to-r from-[#0c274b] to-[#0a1f3a] px-6 py-4 shrink-0 flex items-center justify-between">
               <h2 className="text-xl font-bold text-white flex items-center gap-2">
                 <KeyRound className="w-6 h-6" />
                 {t.resetPasswordTitle}
               </h2>
+              <button
+                onClick={() => setShowForgotPasswordModal(false)}
+                className="text-white/80 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
 
             {/* Content */}

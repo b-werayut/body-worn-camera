@@ -1,4 +1,5 @@
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
+import type { UserTranslationData } from '../../locales/userTranslations';
 
 interface UserManagementFiltersProps {
   searchTerm: string;
@@ -8,7 +9,7 @@ interface UserManagementFiltersProps {
   filterStatus: string;
   setFilterStatus: (value: string) => void;
   onReset: () => void;
-  translations: Record<string, string>;
+  translations: UserTranslationData;
   darkMode: boolean;
 }
 

@@ -1,15 +1,34 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Eye, Edit, Trash2, Clock, User, ChevronLeft, ChevronRight, Plus} from 'lucide-react';
 import { type SpotCheckItem, initialSpotCheckData } from '../data/spotCheckMockData';
-import { ViewModal, DeleteModal, ActionModal, SpotCheckFormModal, type SpotCheckFormData } from '../components/modals/SpotCheckModals';
+import { ViewModal, DeleteModal, ActionModal, SpotCheckFormModal } from '../components/modals/SpotCheckModals';
 import { SpotCheckFilters } from '../components/ui/SpotCheckFilters';
+import { spotCheckTranslations, type SpotCheckLanguage } from '../locales/spotCheckTranslations';
+
+export interface MissionSqlFormData {
+  missionId: string;   
+  reportId: string;    
+  missionName: string;
+  startTime: string; 
+  endTime: string; 
+  description: string;
+  location: string;
+  address: string;
+  coordinates: string;
+  officer: string;
+  cameraId: string;
+  priority: 'high' | 'medium' | 'low';
+  status: string;
+}
 
 interface SpotCheckProps {
   darkMode: boolean;
-  language: 'th' | 'en';
+  language: SpotCheckLanguage;
 }
 
 export function SpotCheck({ darkMode, language }: SpotCheckProps) {
+  const translations = spotCheckTranslations[language];
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOfficer, setSelectedOfficer] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -31,12 +50,16 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
   const [copySuccess, setCopySuccess] = useState(false);
   const [spotCheckData, setSpotCheckData] = useState<SpotCheckItem[]>(initialSpotCheckData);
 
-  const [formData, setFormData] = useState<SpotCheckFormData>({
-    code: '', title: '', date: '', time: '', location: '', address: '', coordinates: '', officer: '', cameraId: '', priority: 'medium', duration: '', description: ''
+  const [formData, setFormData] = useState<MissionSqlFormData>({
+    missionId: '', reportId: '', missionName: '', startTime: '', endTime: '', description: '',
+    location: '', address: '', coordinates: '', officer: '', cameraId: '', priority: 'medium', status: 'waiting'
   });
 
   const resetForm = () => {
-    setFormData({ code: '', title: '', date: '', time: '', location: '', address: '', coordinates: '', officer: '', cameraId: '', priority: 'medium', duration: '', description: '' });
+    setFormData({ 
+      missionId: '', reportId: '', missionName: '', startTime: '', endTime: '', description: '',
+      location: '', address: '', coordinates: '', officer: '', cameraId: '', priority: 'medium', status: 'waiting' 
+    });
   };
 
   // Lock body scroll when modals are open
@@ -108,29 +131,29 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
     }
   };
 
-  function convertToDate(dateStr: string): Date | null {
-    const parts = dateStr.split('/');
-    if (parts.length !== 3) return null;
-    const [day, month, year] = parts;
-    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-  }
-
   const filteredData = spotCheckData.filter((item) => {
-    const matchesSearch = searchQuery === '' || item.code.toLowerCase().includes(searchQuery.toLowerCase()) || item.title.toLowerCase().includes(searchQuery.toLowerCase()) || item.location.toLowerCase().includes(searchQuery.toLowerCase()) || item.officerName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesOfficer = selectedOfficer === 'all' || item.officer === selectedOfficer;
+    const matchesSearch = searchQuery === '' || item.missionId.toLowerCase().includes(searchQuery.toLowerCase()) || item.missionName.toLowerCase().includes(searchQuery.toLowerCase()) || item.location.toLowerCase().includes(searchQuery.toLowerCase()) || item.officerName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesOfficer = selectedOfficer === 'all' || item.officerId === selectedOfficer; // 🚀 เปลี่ยน officer -> officerId
     const matchesStatus = selectedStatus === 'all' || item.status === selectedStatus;
     const matchesReportType = selectedReportType === 'all' || item.reportType === selectedReportType;
-    const itemDate = convertToDate(item.date);
+    
+    const itemDate = new Date(item.startTime);
     const matchesDateRange = (() => {
       if (!startDate && !endDate) return true;
-      if (!itemDate) return true;
+      if (isNaN(itemDate.getTime())) return true;
+      
       const start = startDate ? new Date(startDate) : null;
+      if (start) start.setHours(0, 0, 0, 0);
+      
       const end = endDate ? new Date(endDate) : null;
+      if (end) end.setHours(23, 59, 59, 999);
+      
       if (start && end) return itemDate >= start && itemDate <= end;
       else if (start) return itemDate >= start;
       else if (end) return itemDate <= end;
       return true;
     })();
+    
     return matchesSearch && matchesOfficer && matchesStatus && matchesReportType && matchesDateRange;
   });
 
@@ -161,15 +184,33 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
   // Handlers
   const handleEdit = (item: SpotCheckItem) => {
     setSelectedItem(item);
-    setFormData({ code: item.code, title: item.title, date: item.date.split('/').reverse().join('-'), time: item.time, location: item.location, address: item.address, coordinates: item.coordinates, officer: item.officer, cameraId: item.cameraId, priority: item.priority, duration: item.duration || '', description: '' });
+    setFormData({ 
+      missionId: item.missionId, 
+      reportId: item.reportId || '', 
+      missionName: item.missionName, 
+      startTime: item.startTime, 
+      endTime: item.endTime || '', 
+      description: item.description || '',
+      location: item.location, 
+      address: item.address, 
+      coordinates: item.coordinates, 
+      officer: item.officerId, 
+      cameraId: item.cameraId, 
+      priority: item.priority as 'high'|'medium'|'low', 
+      status: item.status 
+    });
     setShowEditModal(true);
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
     const updatedItem = spotCheckData.find(item => item.id === selectedItem?.id);
     if (updatedItem) {
-      Object.assign(updatedItem, formData);
+      updatedItem.missionId = formData.missionId;
+      updatedItem.missionName = formData.missionName;
+      updatedItem.description = formData.description;
+      updatedItem.startTime = formData.startTime;
+      updatedItem.endTime = formData.endTime;
       setSpotCheckData([...spotCheckData]);
     }
     setShowEditModal(false);
@@ -177,7 +218,7 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
     resetForm();
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.SyntheticEvent) => {
     e.preventDefault();
     setShowModal(false);
     resetForm();
@@ -220,15 +261,15 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
   };
 
   const getStatusText = (status: SpotCheckItem['status']) => {
-    const statusMap = { 'waiting': language === 'th' ? 'รอรับงาน' : 'Waiting', 'accepted': language === 'th' ? 'รับงานแล้ว' : 'Accepted', 'in-progress': language === 'th' ? 'กำลังปฏิบัติงาน' : 'In Progress', 'completed': language === 'th' ? 'เสร็จสิ้น' : 'Completed', 'cancelled': language === 'th' ? 'ยกเลิก' : 'Cancelled' };
+    const statusMap = { 
+      'waiting': translations.statusWaiting, 
+      'accepted': translations.statusAccepted, 
+      'in-progress': translations.statusInProgress, 
+      'completed': translations.statusCompleted, 
+      'cancelled': translations.statusCancelled 
+    };
     return statusMap[status];
   };
-
-  const translationsRecord: Record<string, Record<string, string>> = {
-    th: { title: 'ขออกปฏิบัติงาน (Spot Check)', listTitle: 'รายการออกปฏิบัติงาน', filterDate: 'วันที่', filterOfficer: 'เจ้าหน้าที่', filterStatus: 'สถานะ', filterReportType: 'ประเภทรายงาน', searchPlaceholder: 'ค้นหา รหัส, สถานที่, เจ้าหน้าที่...', search: 'ค้นหา', reset: 'รีเซ็ต', tableNo: 'ลำดับ', tableCode: 'รหัส', tableTitle: 'หัวข้อ', tableStatus: 'สถานะ', tableDetails: 'รายละเอียด', tableOfficer: 'เจ้าหน้าที่', tableDateTime: 'วันที่-เวลา', tableActions: 'เครื่องมือ', statusWaiting: 'รอรับงาน', statusAccepted: 'รับงานแล้ว', statusInProgress: 'กำลังปฏิบัติงาน', statusCompleted: 'เสร็จสิ้น', statusCancelled: 'ยกเลิก', allOfficers: 'ทั้งหมด', allStatus: 'ทั้งหมด', allReportTypes: 'ทั้งหมด', reportTypeDaily: 'รายงานประจำวัน', reportTypeIncident: 'รายงานเหตุการณ์พิเศษ', reportTypeInspection: 'รายงานการตรวจสอบ', reportTypeTraining: 'รายงานการฝึกอบรม', date: 'วันที่', time: 'เวลา', location: 'สถานที่', responsible: 'ผู้รับผิดชอบ', camera: 'กล้อง', priority: 'ลำดับความสำคัญ', duration: 'ระยะเวลา', view: 'ดู', edit: 'แก้ไข', delete: 'ลบ', noData: 'ไม่พบข้อมูล', viewDetails: 'รายละเอียด', editRecord: 'แก้ไขรายการ', deleteConfirm: 'ยืนยันการลบ', deleteMessage: 'คุณแน่ใจหรือไม่ที่จะลบรายการนี้?', cancel: 'ยกเลิก', confirm: 'ยืนยัน', save: 'บันทึก', close: 'ปิด', acceptJob: 'รับงาน', startJob: 'เริ่มปฏิบัติงาน', completeJob: 'สิ้นสุดปฏิบัติงาน', rejectJob: 'ปฏิเสธ', backToMain: 'กลับหน้าหลัก', acceptJobConfirm: 'ยืนยันการรับงาน', startJobConfirm: 'ยืนยันการเริ่มปฏิบัติงาน', completeJobConfirm: 'ยืนยันการสิ้นสุดปฏิบัติงาน', rejectJobConfirm: 'ยืนยันการปฏิเสธงาน', acceptJobMessage: 'คุณต้องการรับงานนี้หรือไม่?', startJobMessage: 'คุณต้องการเริ่มปฏิบัติงานนี้หรือไม่?', completeJobMessage: 'คุณต้องการยืนยันว่างานนี้เสร็จสิ้นแล้วหรือไม่?', rejectJobMessage: 'คุณต้องการปฏิเสธงานนี้หรือไม่?' },
-    en: { title: 'Spot Check Request', listTitle: 'Spot Check List', filterDate: 'Date', filterOfficer: 'Officer', filterStatus: 'Status', searchPlaceholder: 'Search code, location, officer...', search: 'Search', reset: 'Reset', tableNo: 'No.', tableCode: 'Code', tableTitle: 'Title', tableStatus: 'Status', tableDetails: 'Details', tableOfficer: 'Officer', tableDateTime: 'Date-Time', tableActions: 'Actions', statusWaiting: 'Waiting', statusAccepted: 'Accepted', statusInProgress: 'In Progress', statusCompleted: 'Completed', statusCancelled: 'Cancelled', allOfficers: 'All', allStatus: 'All', allReportTypes: 'All', reportTypeDaily: 'Daily Report', reportTypeIncident: 'Incident Report', reportTypeInspection: 'Inspection Report', reportTypeTraining: 'Training Report', date: 'Date', time: 'Time', location: 'Location', responsible: 'Responsible', camera: 'Camera', priority: 'Priority', duration: 'Duration', view: 'View', edit: 'Edit', delete: 'Delete', noData: 'No data found', viewDetails: 'View Details', editRecord: 'Edit Record', deleteConfirm: 'Confirm Delete', deleteMessage: 'Are you sure you want to delete this record?', cancel: 'Cancel', confirm: 'Confirm', save: 'Save', close: 'Close', acceptJob: 'Accept Job', startJob: 'Start Job', completeJob: 'Complete Job', rejectJob: 'Reject', backToMain: 'Back to Main', acceptJobConfirm: 'Confirm Accept Job', startJobConfirm: 'Confirm Start Job', completeJobConfirm: 'Confirm Complete Job', rejectJobConfirm: 'Confirm Reject Job', acceptJobMessage: 'Do you want to accept this job?', startJobMessage: 'Do you want to start this job?', completeJobMessage: 'Do you want to confirm that this job is completed?', rejectJobMessage: 'Do you want to reject this job?' }
-  };
-  const translations = translationsRecord[language];
 
   return (
     <div className="space-y-6">
@@ -237,14 +278,16 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
         <div className="flex items-center justify-between">
           <div>
             <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-[#0c274b]'}`}>{translations.listTitle}</h2>
-            <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>{language === 'th' ? `แสดงข้อมูลทั้งหมด ${filteredData.length} รายการ` : `Showing ${filteredData.length} items`}</p>
+            <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+              {translations.showingAll} {filteredData.length} {translations.itemsTotal}
+            </p>
           </div>
           <button 
             onClick={() => setShowModal(true)} 
             className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-bold rounded-lg transition-all shadow-md hover:shadow-lg hover:scale-105 cursor-pointer"
           >
             <Plus className="w-5 h-5" /> 
-            <span>{language === 'th' ? 'เพิ่มรายการออกปฏิบัติงาน' : 'Add Spot Check'}</span>
+            <span>{translations.addSpotCheck}</span>
           </button>
         </div>
       </div>
@@ -261,11 +304,10 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
         setSelectedOfficer={setSelectedOfficer}
         selectedStatus={selectedStatus}
         setSelectedStatus={setSelectedStatus}
-        selectedReportType={selectedReportType} // ส่ง props เพิ่ม
-        setSelectedReportType={setSelectedReportType} // ส่ง props เพิ่ม
+        selectedReportType={selectedReportType} 
+        setSelectedReportType={setSelectedReportType} 
         translations={translations}
         darkMode={darkMode}
-        language={language}
         onReset={() => { 
           setSearchQuery(''); 
           setStartDate(''); 
@@ -277,7 +319,7 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
         }}
       />
 
-      {/* Desktop Table **/}
+      {/* Desktop Table */}
       <div className={`hidden lg:block rounded-xl shadow-lg overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -302,13 +344,17 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
                     <td className={`px-4 py-4 text-center border-r ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-200 text-gray-600'}`}>{indexOfFirstItem + index + 1}</td>
                     <td className={`px-4 py-4 border-r ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                       <div className="space-y-1">
-                        <p className={`font-bold ${darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}`}>{item.code}</p>
-                        <div className="flex items-center gap-1.5 text-xs"><Clock className="w-3 h-3" /><span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>{item.time}</span></div>
+                        <p className={`font-bold ${darkMode ? 'text-[#fcd500]' : 'text-[#0c274b]'}`}>{item.missionId}</p>
+                        <div className="flex items-center gap-1.5 text-xs"><Clock className="w-3 h-3" />
+                          <span className={darkMode ? 'text-gray-400' : 'text-gray-600'}>
+                            {item.startTime.includes('T') ? item.startTime.split('T')[1].substring(0, 5) : item.startTime}
+                          </span>
+                        </div>
                       </div>
                     </td>
                     <td className={`px-4 py-4 border-r ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                       <div className="space-y-2">
-                        <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.title}</p>
+                        <p className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>{item.missionName}</p>
                         <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${getPriorityColor(item.priority)}`}>{item.priority === 'high' ? 'สำคัญมาก' : item.priority === 'medium' ? 'ปานกลาง' : 'ปกติ'}</span>
                       </div>
                     </td>
@@ -317,7 +363,13 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
                     </td>
                     <td className={`px-4 py-4 border-r ${darkMode ? 'border-gray-600' : 'border-gray-200'}`}>
                       <div className="space-y-1.5 text-sm">
-                        <div className="flex items-start gap-2"><Calendar className={`w-4 h-4 mt-0.5 shrink-0 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} /><span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{item.date}</span></div>
+                        <div className="flex items-start gap-2"><Calendar className={`w-4 h-4 mt-0.5 shrink-0 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                          <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                            {item.startTime.includes('T') 
+                              ? new Date(item.startTime).toLocaleDateString('th-TH') 
+                              : item.startTime}
+                          </span>
+                        </div>
                         <div className="flex items-start gap-2"><span className={`font-medium ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>📍</span><span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{item.location}</span></div>
                         <div className="flex items-center gap-2"><User className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} /><span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{item.officerName}</span></div>
                       </div>
@@ -359,17 +411,19 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className="text-white font-bold text-lg">{item.code}</span>
+                      <span className="text-white font-bold text-lg">{item.missionId}</span>
                       <span className={`px-2 py-0.5 rounded text-xs font-bold border ${getStatusColor(item.status)}`}>{item.statusText}</span>
                     </div>
-                    <p className="text-white/90 text-sm">{item.title}</p>
+                    <p className="text-white/90 text-sm">{item.missionName}</p>
                   </div>
                 </div>
               </div>
               <div className="p-4 space-y-3">
                 <div className="flex items-center gap-2 text-sm flex-wrap">
                   <Calendar className={`w-4 h-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>{item.date} {item.time}</span>
+                  <span className={darkMode ? 'text-gray-300' : 'text-gray-700'}>
+                    {item.startTime.includes('T') ? new Date(item.startTime).toLocaleString('th-TH') : item.startTime}
+                  </span>
                   <span className={`ml-auto px-2 py-0.5 rounded text-xs font-medium ${getPriorityColor(item.priority)}`}>{item.priority === 'high' ? 'สำคัญมาก' : item.priority === 'medium' ? 'ปานกลาง' : 'ปกติ'}</span>
                 </div>
                 <div className="space-y-2 text-sm">
@@ -405,7 +459,6 @@ export function SpotCheck({ darkMode, language }: SpotCheckProps) {
       <ViewModal show={showViewModal} item={selectedItem} onClose={() => setShowViewModal(false)} translations={translations} language={language} darkMode={darkMode} getStatusColor={getStatusColor} getPriorityColor={getPriorityColor} copyToClipboard={copyToClipboard} copySuccess={copySuccess} handleAction={(type) => { setActionType(type); setShowActionModal(true); }} />
       <DeleteModal show={showDeleteModal} item={selectedItem} onClose={() => setShowDeleteModal(false)} onConfirm={handleConfirmDelete} translations={translations} language={language} darkMode={darkMode} />
       <ActionModal show={showActionModal} item={selectedItem} actionType={actionType} onClose={() => setShowActionModal(false)} onConfirm={handleConfirmAction} translations={translations} language={language} darkMode={darkMode} />
-
     </div>
   );
 }
